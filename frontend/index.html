@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mazda-Lite Dealer Portal</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { color: #101010; border-bottom: 2px solid #d30808; padding-bottom: 10px; }
+        .part-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .part-name { font-weight: bold; font-size: 1.1em; }
+        .part-price { color: #d30808; font-weight: bold; }
+        .btn { background-color: #d30808; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+        .btn:hover { background-color: #a00000; }
+        .stock-badge { background-color: #eee; padding: 4px 8px; border-radius: 10px; font-size: 0.8em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Parts & Accessories (P&A) Portal</h1>
+        <p>Welcome, Dealer. Current Inventory Status:</p>
+        <div id="inventory-list">Loading parts data...</div>
+    </div>
+
+    <script>
+        // In Kubernetes, we will configure this URL via ConfigMap
+        // For local testing, assume backend is on localhost:5000
+        const API_URL = "http://localhost:5000/api/parts"; 
+
+        async function fetchParts() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error("Failed to fetch inventory");
+                const parts = await response.json();
+                
+                const list = document.getElementById('inventory-list');
+                list.innerHTML = ''; // Clear loading text
+
+                parts.forEach(part => {
+                    const div = document.createElement('div');
+                    div.className = 'part-card';
+                    div.innerHTML = `
+                        <div>
+                            <div class="part-name">${part.name} <span class="stock-badge">ID: ${part.id}</span></div>
+                            <small>Stock: ${part.stock} units</small>
+                        </div>
+                        <div>
+                            <span class="part-price">$${part.price.toFixed(2)}</span>
+                            <button class="btn" onclick="alert('Order placed for ${part.id}')">Order</button>
+                        </div>
+                    `;
+                    list.appendChild(div);
+                });
+            } catch (error) {
+                document.getElementById('inventory-list').innerHTML = 
+                    `<p style="color:red">Error loading P&A Inventory. Is the Backend running?</p>`;
+                console.error(error);
+            }
+        }
+        
+        fetchParts();
+    </script>
+</body>
+</html>
