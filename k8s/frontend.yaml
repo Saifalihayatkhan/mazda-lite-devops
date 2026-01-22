@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: docksaif/mazda-frontend:v3 # Note: Using v2 here
+        image: docksaif/mazda-frontend:v4 # Note: Using v2 here
         ports:
         - containerPort: 80
 ---
