@@ -1,21 +1,21 @@
 provider "aws" {
-  region = "us-east-1"  # N. Virginia is standard for Free Tier
+  region = "us-east-1"
 }
 
-# 1. Create a Security Group (Firewall)
+# 1. Security Group (Updated with NodePort range)
 resource "aws_security_group" "mazda_sg" {
-  name        = "mazda-lite-sg"
-  description = "Allow SSH, HTTP, and K8s traffic"
+  name        = "mazda-lite-sg-v2"
+  description = "Allow SSH, HTTP, and K8s NodePorts"
 
-  # SSH Access (For you to login)
+  # SSH Access
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # In production, restrict this to your IP!
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # HTTP Access (For the Dealer Portal)
+  # HTTP Access
   ingress {
     from_port   = 80
     to_port     = 80
@@ -23,7 +23,8 @@ resource "aws_security_group" "mazda_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # NodePort Access (Range for K3s Services)
+  # K8s NodePort Access (For ArgoCD UI & App)
+  # This fixes the "Site can't be reached" error automatically
   ingress {
     from_port   = 30000
     to_port     = 32767
@@ -31,7 +32,7 @@ resource "aws_security_group" "mazda_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Outbound traffic (Allow server to download Docker images)
+  # Outbound traffic
   egress {
     from_port   = 0
     to_port     = 0
@@ -40,37 +41,36 @@ resource "aws_security_group" "mazda_sg" {
   }
 }
 
-# 2. Generate a Private Key locally
+# 2. Generate Private Key
 resource "tls_private_key" "mazda_key" {
   algorithm = "RSA"
   rsa_bits  = 4096
 }
 
-# 3. Upload the Public Key to AWS
+# 3. Upload Public Key to AWS
 resource "aws_key_pair" "generated_key" {
-  key_name   = "mazda-devops-key"
+  key_name   = "mazda-devops-key-v2"
   public_key = tls_private_key.mazda_key.public_key_openssh
 }
 
-# 4. Save the Private Key to your computer (so you can login)
+# 4. Save Private Key locally
 resource "local_file" "private_key" {
   content  = tls_private_key.mazda_key.private_key_pem
   filename = "${path.module}/mazda-key.pem"
 }
 
-# 5. Create the EC2 Instance (The Server)
+# 5. EC2 Instance (Upgraded to t2.medium)
 resource "aws_instance" "mazda_server" {
-  ami           = "ami-0e2c8caa4b6378d8c" # Ubuntu 24.04 LTS (us-east-1)
-  instance_type = "t2.micro"              # Free Tier Eligible
+  ami           = "ami-0e2c8caa4b6378d8c" # Ubuntu 24.04 LTS
+  instance_type = "t2.medium"             # UPGRADED: 2 vCPU, 4GB RAM
   key_name      = aws_key_pair.generated_key.key_name
   vpc_security_group_ids = [aws_security_group.mazda_sg.id]
 
   tags = {
-    Name = "Mazda-Lite-Cluster"
+    Name = "Mazda-Lite-Cluster-Medium"
   }
 }
 
-# 6. Output the Public IP address
 output "server_ip" {
   value = aws_instance.mazda_server.public_ip
 }
